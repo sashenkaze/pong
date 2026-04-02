@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pinball Game</title>
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #111;
+    }
+
+    canvas {
+      border: 2px solid #fff;
+    }
+
+    .score {
+      position: absolute;
+      top: 20px;
+      font-size: 24px;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    .game-over {
+      color: white;
+      font-size: 40px;
+      text-align: center;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: none;
+    }
+
+    .paused {
+      color: white;
+      font-size: 40px;
+      text-align: center;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: none;
+    }
+
+  </style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+<div id="score" class="score">Score: 0</div>
+<div id="gameOver" class="game-over">Game Over! Press R to Restart</div>
+<div id="paused" class="paused">Paused! Press Space to Resume</div>
+
+<script>
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const scoreElement = document.getElementById('score');
+  const gameOverElement = document.getElementById('gameOver');
+  const pausedElement = document.getElementById('paused');
+
+  const width = canvas.width;
+  const height = canvas.height;
+
+  let ball, paddle1, paddle2, score, gameOver, paused;
+  const ballSpeed = 4;
+  const paddleSpeed = 8;
+
+  // Membuat bola
+  function createBall() {
+    ball = {
+      x: width / 2,
+      y: height / 2,
+      radius: 10,
+      dx: ballSpeed,
+      dy: ballSpeed,
+      color: 'yellow'
+    };
+  }
+
+  // Membuat paddle
+  function createPaddles() {
+    paddle1 = {
+      x: width / 2 - 60,
+      y: height - 20,
+      width: 120,
+      height: 10,
+      color: 'blue',
+      dx: 0
+    };
+    paddle2 = {
+      x: width / 2 - 60,
+      y: 10,
+      width: 120,
+      height: 10,
+      color: 'red',
+      dx: 0
+    };
+  }
+
+  // Menggambar bola
+  function drawBall() {
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+    ctx.fillStyle = ball.color;
+    ctx.fill();
+    ctx.closePath();
+  }
+
+  // Menggambar paddle
+  function drawPaddles() {
+    ctx.fillStyle = paddle1.color;
+    ctx.fillRect(paddle1.x, paddle1.y, paddle1.width, paddle1.height);
+
+    ctx.fillStyle = paddle2.color;
+    ctx.fillRect(paddle2.x, paddle2.y, paddle2.width, paddle2.height);
+  }
+
+  // Menggerakkan paddle
+  function movePaddles() {
+    // Paddle 1 (paddle bawah)
+    if (paddle1.x + paddle1.width <= width && paddle1.x >= 0) {
+      paddle1.x += paddle1.dx;
+    } else {
+      // Paddle tidak bisa melewati sisi kanan atau kiri
+      if (paddle1.x + paddle1.width > width) {
+        paddle1.x = width - paddle1.width;
+      }
+      if (paddle1.x < 0) {
+        paddle1.x = 0;
+      }
+    }
+
+    // Paddle 2 (paddle atas)
+    if (paddle2.x + paddle2.width <= width && paddle2.x >= 0) {
+      paddle2.x += paddle2.dx;
+    } else {
+      // Paddle tidak bisa melewati sisi kanan atau kiri
+      if (paddle2.x + paddle2.width > width) {
+        paddle2.x = width - paddle2.width;
+      }
+      if (paddle2.x < 0) {
+        paddle2.x = 0;
+      }
+    }
+  }
+
+  // Menggerakkan bola
+  function moveBall() {
+    ball.x += ball.dx;
+    ball.y += ball.dy;
+
+    // Bounce bola pada batas layar
+    if (ball.x + ball.radius > width || ball.x - ball.radius < 0) {
+      ball.dx = -ball.dx;
+    }
+    if (ball.y - ball.radius < 0) { // Kalau bola mengenai paddle merah
+      ball.dy = -ball.dy;
+    }
+
+    // Bounce bola jika mengenai paddle
+    if (ball.y + ball.radius > paddle1.y && ball.x > paddle1.x && ball.x < paddle1.x + paddle1.width) {
+      ball.dy = -ball.dy;
+      score++;
+    }
+
+    if (ball.y - ball.radius < paddle2.y + paddle2.height && ball.x > paddle2.x && ball.x < paddle2.x + paddle2.width) {
+      ball.dy = -ball.dy;
+      score++;
+    }
+
+    // Game over jika bola jatuh ke bawah atau ke atas
+    if (ball.y + ball.radius > height || ball.y - ball.radius < 0) {
+      gameOver = true;
+    }
+  }
+
+  // Menampilkan score
+  function updateScore() {
+    scoreElement.textContent = `Score: ${score}`;
+  }
+
+  // Menampilkan game over
+  function showGameOver() {
+    gameOverElement.style.display = 'block';
+  }
+
+  // Fungsi utama untuk menggambar game
+  function draw() {
+    ctx.clearRect(0, 0, width, height);
+
+    if (gameOver) {
+      showGameOver();
+      return;
+    }
+
+    if (paused) {
+      pausedElement.style.display = 'block';
+      return;
+    } else {
+      pausedElement.style.display = 'none';
+    }
+
+    drawBall();
+    drawPaddles();
+    updateScore();
+    moveBall();
+    movePaddles();
+
+    requestAnimationFrame(draw);
+  }
+
+  // Inisialisasi game
+  function startGame() {
+    score = 0;
+    gameOver = false;
+    paused = false;  // Mulai dengan permainan tidak dijeda
+    gameOverElement.style.display = 'none'; // Sembunyikan pesan Game Over
+    createBall();
+    createPaddles();
+    draw();
+  }
+
+  // Kontrol paddle dengan keyboard
+  const keys = {};
+  document.addEventListener('keydown', (e) => {
+    keys[e.key] = true;
+    if (e.key === 'ArrowLeft') {
+      paddle1.dx = -paddleSpeed;
+    } else if (e.key === 'ArrowRight') {
+      paddle1.dx = paddleSpeed;
+    }
+
+    if (e.key === 'a') {
+      paddle2.dx = -paddleSpeed;
+    } else if (e.key === 'd') {
+      paddle2.dx = paddleSpeed;
+    }
+
+    // Tombol Pause
+    if (e.key === 'p' || e.key === 'P') {
+      if (gameOver) return; // Jangan pause jika game over
+      paused = true; // Pause permainan
+    }
+
+    // Tombol Resume dengan Space
+    if (e.key === ' ' && !gameOver) {
+      paused = false; // Resume permainan
+    }
+  });
+
+  document.addEventListener('keyup', (e) => {
+    keys[e.key] = false;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      paddle1.dx = 0;
+    }
+
+    if (e.key === 'a' || e.key === 'd') {
+      paddle2.dx = 0;
+    }
+  });
+
+  // Tombol untuk reset game
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'r' || e.key === 'R') {
+      startGame();
+    }
+  });
+
+  startGame();
+</script>
+
+</body>
+</html>
